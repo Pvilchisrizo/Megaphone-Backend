@@ -53,8 +53,13 @@ app.get("/", (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-  const posts = await db.collection("posts").find().toArray();
-  res.json(posts);
+  try {
+    const posts = await db.collection("posts").find().toArray();
+    res.json(posts);
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/posts", async (req, res) => {
