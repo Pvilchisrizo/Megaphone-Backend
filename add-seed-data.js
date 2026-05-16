@@ -6,7 +6,7 @@ async function addSeedData() {
   const uri = process.env.MONGO_URI;
   const client = new MongoClient(uri);
   await client.connect();
-  const db = client.db("testdb");
+  db = client.db(process.env.MONGO_DB_NAME);
   const result = await db.collection("posts").insertMany(seedData);
   console.log(`Inserted ${result.insertedCount} posts.`);
   await client.close();
