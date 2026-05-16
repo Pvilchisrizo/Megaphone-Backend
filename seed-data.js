@@ -21,4 +21,4 @@ const seedData = [
   },
 ];
 
-export default seedData;
+module.exports = seedData;

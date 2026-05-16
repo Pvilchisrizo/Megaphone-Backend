@@ -1,6 +1,6 @@
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const seedData = require(`./seed-data`).default;
+const seedData = require(`./seed-data`);
 
 async function addSeedData() {
   const uri = process.env.MONGO_URI;
