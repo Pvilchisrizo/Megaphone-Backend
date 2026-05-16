@@ -8,12 +8,15 @@ const app = express();
 app.use(express.json());
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
   },
+  tls: true,
+  tlsAllowInvalidCertificates: false,
 });
 
 let db;
@@ -26,12 +29,13 @@ async function connectDB() {
 
 async function startServer() {
   try {
-    await connectDB().catch(console.dir);
-    app.listen(3000, () => {
-      console.log("Server running on port 3000");
+    await connectDB();
+    app.listen(process.env.PORT || 3000, () => {
+      console.log("Server running");
     });
   } catch (error) {
     console.log("Failed to connect.", error);
+    process.exit(1);
   }
 }
 
