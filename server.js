@@ -3,6 +3,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const uri = process.env.MONGO_URI;
 const express = require("express");
+const crypto = require("crypto"); // we require this is package with node for crytography, no need to do nom star or anything
 
 const app = express();
 app.use(express.json());
@@ -64,6 +65,46 @@ app.get("/posts", async (req, res) => {
     console.error("Error fetching posts:", err);
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get("/signin", async (req, res) => {
+  res.sendFile("signin.html", { root: "../Megaphone-Frontend" });
+  // root is telling where to go to get the file, up a level then Megaphone-Fronted
+});
+
+// we add a new route in order to create a user and we test it in postman
+app.post("/users", async (req, res) => {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  const salt = crypto.randomBytes(16);
+
+  crypto.pbkdf2(
+    password,
+    salt,
+    310000,
+    32,
+    "sha256",
+    async (err, hashedPassword) => {
+      //310000 is the standard number or iterations, 32 bits is how long the hash will be
+      if (err) {
+        return res.status(500).json({ message: "Failed to hash password." });
+      }
+      //if no errors then we can add our new user to the data base
+      const insertResult = await db.collection("users").insertOne({
+        //with MondoDB as soon as we run the insertResult the collection is created in this case users// we used underscore because camelcase is a js standard not a DB
+        username: username,
+        hashed_password: hashedPassword.toString("base64"),
+        salt: salt.toString("base64"),
+      });
+
+      // the .status are the number of the browser response .....google it
+      return res.status(201).json({
+        _id: insertResult.insertId,
+        username: username,
+      });
+    }
+  );
 });
 
 app.post("/posts", async (req, res) => {
