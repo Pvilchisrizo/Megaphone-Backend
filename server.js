@@ -67,8 +67,8 @@ app.get("/posts", async (req, res) => {
   }
 });
 
-app.get("/signin", async (req, res) => {
-  res.sendFile("signin.html", { root: "../Megaphone-Frontend" });
+app.get("/signup", async (req, res) => {
+  res.sendFile("signup.html", { root: "../Megaphone-Frontend" });
   // root is telling where to go to get the file, up a level then Megaphone-Fronted
 });
 
