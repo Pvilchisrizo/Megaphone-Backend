@@ -16,8 +16,6 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
-  tls: true,
-  tlsAllowInvalidCertificates: false,
 });
 
 let db;
@@ -25,18 +23,17 @@ let db;
 async function connectDB() {
   await client.connect();
   db = client.db(process.env.MONGO_DB_NAME);
-  console.log("Megaphone-Paloma");
+  console.log("Connected to MongoDB");
 }
 
 async function startServer() {
   try {
-    await connectDB();
-    app.listen(process.env.PORT || 3000, () => {
-      console.log("Server running");
+    await connectDB().catch(console.dir);
+    app.listen(3000, () => {
+      console.log("Server running on port 3000");
     });
   } catch (error) {
     console.log("Failed to connect.", error);
-    process.exit(1);
   }
 }
 
@@ -51,6 +48,7 @@ app.use((req, res, next) => {
 
   next();
 });
+
 startServer();
 
 app.get("/", (req, res) => {
@@ -58,21 +56,14 @@ app.get("/", (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-  try {
-    const posts = await db.collection("posts").find().toArray();
-    res.json(posts);
-  } catch (err) {
-    console.error("Error fetching posts:", err);
-    res.status(500).json({ error: err.message });
-  }
+  const posts = await db.collection("posts").find().toArray();
+  res.json(posts);
 });
 
-app.get("/signup", async (req, res) => {
-  res.sendFile("signup.html", { root: "../Megaphone-Frontend" });
-  // root is telling where to go to get the file, up a level then Megaphone-Fronted
+app.get("/signup", (req, res) => {
+  res.sendFile("signup.html", { root: "../megaphone-frontend" });
 });
 
-// we add a new route in order to create a user and we test it in postman
 app.post("/users", async (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
@@ -86,19 +77,16 @@ app.post("/users", async (req, res) => {
     32,
     "sha256",
     async (err, hashedPassword) => {
-      //310000 is the standard number or iterations, 32 bits is how long the hash will be
       if (err) {
         return res.status(500).json({ message: "Failed to hash password." });
       }
-      //if no errors then we can add our new user to the data base
+
       const insertResult = await db.collection("users").insertOne({
-        //with MondoDB as soon as we run the insertResult the collection is created in this case users// we used underscore because camelcase is a js standard not a DB
         username: username,
         hashed_password: hashedPassword.toString("base64"),
         salt: salt.toString("base64"),
       });
 
-      // the .status are the number of the browser response .....google it
       return res.status(201).json({
         _id: insertResult.insertId,
         username: username,
