@@ -1,15 +1,15 @@
-// importing packages
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const uri = process.env.MONGO_URI;
 const express = require("express");
-const crypto = require("crypto"); // we require this is package with node for crytography, no need to do nom star or anything
+const path = require("path");
+const pwd = require("passwordjs");
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../megaphone-frontend")));
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -41,7 +41,7 @@ app.use((req, res, next) => {
   res.set(`Access-Control-Allow-Origin`, `*`);
 
   if (req.method === `OPTIONS`) {
-    res.set(`Access-Control-Allow-Methods`, `POST,PATCH,DELETE`);
+    res.set(`Access-Control-Allow-Methods`, `GET,POST,PATCH,DELETE`);
     res.set(`Access-Control-Allow-Headers`, `Content-Type`);
     return res.sendStatus(204);
   }
@@ -60,39 +60,51 @@ app.get("/posts", async (req, res) => {
   res.json(posts);
 });
 
-app.get("/signup", (req, res) => {
-  res.sendFile("signup.html", { root: "../megaphone-frontend" });
-});
-
-app.post("/users", async (req, res) => {
+app.post("/signup", async (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const salt = crypto.randomBytes(16);
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ message: "Username and password are required." });
+  }
 
-  crypto.pbkdf2(
-    password,
-    salt,
-    310000,
-    32,
-    "sha256",
-    async (err, hashedPassword) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to hash password." });
-      }
+  const existingUser = await db.collection("users").findOne({ username });
+  if (existingUser) {
+    return res.status(409).json({ message: "Username already exists." });
+  }
 
-      const insertResult = await db.collection("users").insertOne({
-        username: username,
-        hashed_password: hashedPassword.toString("base64"),
-        salt: salt.toString("base64"),
-      });
+  const hashedPassword = await pwd.encrypt(password, "bcrypt");
+  const insertResult = await db.collection("users").insertOne({
+    username,
+    hashed_password: hashedPassword,
+  });
 
-      return res.status(201).json({
-        _id: insertResult.insertId,
-        username: username,
-      });
-    }
-  );
+  return res.status(201).json({
+    _id: insertResult.insertedId,
+    username,
+  });
+});
+
+app.post("/login/password", async (req, res) => {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  const user = await db.collection("users").findOne({ username });
+  if (!user) {
+    return res.status(401).json({ message: "Incorrect username or password." });
+  }
+
+  const isValid = await pwd.compare(password, user.hashed_password, "bcrypt");
+  if (!isValid) {
+    return res.status(401).json({ message: "Incorrect username or password." });
+  }
+
+  return res.json({
+    _id: user._id,
+    username: user.username,
+  });
 });
 
 app.post("/posts", async (req, res) => {
